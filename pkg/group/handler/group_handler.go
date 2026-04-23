@@ -463,7 +463,7 @@ func (g *groupHandler) LeaveGroup(ctx *gin.Context) {
 		return
 	}
 
-	if data.GroupJID == "" {
+	if data.GroupJID.String() == "" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "groupJid is required"})
 		return
 	}
