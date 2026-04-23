@@ -198,9 +198,11 @@ func (r *Routes) AssignRoutes(eng *gin.Engine) {
 	{
 		routes.Use(r.authMiddleware.Auth)
 		{
-			routes.POST("/create", r.communityHandler.CreateCommunity)
+		routes.POST("/create", r.communityHandler.CreateCommunity)
 			routes.POST("/add", r.jidValidationMiddleware.ValidateJIDFields("number", "communityId"), r.communityHandler.CommunityAdd)
 			routes.POST("/remove", r.jidValidationMiddleware.ValidateJIDFields("number", "communityId"), r.communityHandler.CommunityRemove)
+			routes.POST("/subgroups", r.communityHandler.GetSubGroups)
+			routes.POST("/participants", r.communityHandler.GetLinkedGroupsParticipants)
 		}
 	}
 	routes = eng.Group("/label")

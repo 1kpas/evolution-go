@@ -18,6 +18,8 @@ type CommunityService interface {
 	CreateCommunity(data *CreateCommunityStruct, instance *instance_model.Instance) (*types.GroupInfo, error)
 	CommunityAdd(data *AddParticipantStruct, instance *instance_model.Instance) (gin.H, error)
 	CommunityRemove(data *AddParticipantStruct, instance *instance_model.Instance) (gin.H, error)
+	GetSubGroups(data *GetSubGroupsStruct, instance *instance_model.Instance) ([]*types.GroupLinkTarget, error)
+	GetLinkedGroupsParticipants(data *GetSubGroupsStruct, instance *instance_model.Instance) ([]types.JID, error)
 }
 
 type communityService struct {
@@ -33,6 +35,10 @@ type CreateCommunityStruct struct {
 type AddParticipantStruct struct {
 	CommunityJID string   `json:"communityJid"`
 	GroupJID     []string `json:"groupJid"`
+}
+
+type GetSubGroupsStruct struct {
+	CommunityJID string `json:"communityJid"`
 }
 
 func (c *communityService) ensureClientConnected(instanceId string) (*whatsmeow.Client, error) {
@@ -154,6 +160,50 @@ func (c *communityService) CommunityRemove(data *AddParticipantStruct, instance 
 		"success": successList,
 		"failed":  failedList,
 	}, nil
+}
+
+func (c *communityService) GetSubGroups(data *GetSubGroupsStruct, instance *instance_model.Instance) ([]*types.GroupLinkTarget, error) {
+	client, err := c.ensureClientConnected(instance.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	communityJID, ok := utils.ParseJID(data.CommunityJID)
+	if !ok {
+		c.loggerWrapper.GetLogger(instance.Id).LogError("[%s] error parse community jid", instance.Id)
+		return nil, errors.New("invalid community jid")
+	}
+
+	resp, err := client.GetSubGroups(context.Background(), communityJID)
+	if err != nil {
+		c.loggerWrapper.GetLogger(instance.Id).LogError("[%s] error getting sub groups: %v", instance.Id, err)
+		return nil, err
+	}
+
+	c.loggerWrapper.GetLogger(instance.Id).LogInfo("[%s] Retrieved %d sub groups for community %s", instance.Id, len(resp), data.CommunityJID)
+	return resp, nil
+}
+
+func (c *communityService) GetLinkedGroupsParticipants(data *GetSubGroupsStruct, instance *instance_model.Instance) ([]types.JID, error) {
+	client, err := c.ensureClientConnected(instance.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	communityJID, ok := utils.ParseJID(data.CommunityJID)
+	if !ok {
+		c.loggerWrapper.GetLogger(instance.Id).LogError("[%s] error parse community jid", instance.Id)
+		return nil, errors.New("invalid community jid")
+	}
+
+	resp, err := client.GetLinkedGroupsParticipants(context.Background(), communityJID)
+	if err != nil {
+		c.loggerWrapper.GetLogger(instance.Id).LogError("[%s] error getting linked groups participants: %v", instance.Id, err)
+		return nil, err
+	}
+
+	c.loggerWrapper.GetLogger(instance.Id).LogInfo("[%s] Retrieved %d participants for community %s", instance.Id, len(resp), data.CommunityJID)
+	return resp, nil
 }
 
 func NewCommunityService(

@@ -12,6 +12,8 @@ type CommunityHandler interface {
 	CreateCommunity(ctx *gin.Context)
 	CommunityAdd(ctx *gin.Context)
 	CommunityRemove(ctx *gin.Context)
+	GetSubGroups(ctx *gin.Context)
+	GetLinkedGroupsParticipants(ctx *gin.Context)
 }
 
 type communityHandler struct {
@@ -149,6 +151,88 @@ func (c *communityHandler) CommunityRemove(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "success", "data": resp})
+}
+
+// Get sub groups of a community
+// @Summary Get sub groups of a community
+// @Description Returns all sub-groups of a community, including the announcement group (IsDefaultSubGroup=true)
+// @Tags Community
+// @Accept json
+// @Produce json
+// @Param message body community_service.GetSubGroupsStruct true "Community data"
+// @Success 200 {object} gin.H "success"
+// @Failure 400 {object} gin.H "Error on validation"
+// @Failure 500 {object} gin.H "Internal server error"
+// @Router /community/subgroups [post]
+func (c *communityHandler) GetSubGroups(ctx *gin.Context) {
+	getInstance := ctx.MustGet("instance")
+
+	instance, ok := getInstance.(*instance_model.Instance)
+	if !ok {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "instance not found"})
+		return
+	}
+
+	var data *community_service.GetSubGroupsStruct
+	err := ctx.ShouldBindBodyWithJSON(&data)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if data.CommunityJID == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "communityJid is required"})
+		return
+	}
+
+	resp, err := c.communityService.GetSubGroups(data, instance)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "success", "data": resp})
+}
+
+// Get all participants across all sub-groups of a community
+// @Summary Get linked groups participants
+// @Description Returns all unique participant JIDs from all sub-groups of a community
+// @Tags Community
+// @Accept json
+// @Produce json
+// @Param message body community_service.GetSubGroupsStruct true "Community data"
+// @Success 200 {object} gin.H "success"
+// @Failure 400 {object} gin.H "Error on validation"
+// @Failure 500 {object} gin.H "Internal server error"
+// @Router /community/participants [post]
+func (c *communityHandler) GetLinkedGroupsParticipants(ctx *gin.Context) {
+	getInstance := ctx.MustGet("instance")
+
+	instance, ok := getInstance.(*instance_model.Instance)
+	if !ok {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "instance not found"})
+		return
+	}
+
+	var data *community_service.GetSubGroupsStruct
+	err := ctx.ShouldBindBodyWithJSON(&data)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if data.CommunityJID == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "communityJid is required"})
+		return
+	}
+
+	resp, err := c.communityService.GetLinkedGroupsParticipants(data, instance)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "success", "data": resp, "count": len(resp)})
 }
 
 func NewCommunityHandler(
