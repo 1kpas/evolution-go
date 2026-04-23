@@ -1,4 +1,4 @@
-package group_handler
+﻿package group_handler
 
 import (
 	"net/http"
@@ -344,7 +344,7 @@ func (g *groupHandler) UpdateParticipant(ctx *gin.Context) {
 		return
 	}
 
-	if data.GroupJID.String() == "" {
+	if data.GroupJID == "" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "groupJid is required"})
 		return
 	}
@@ -463,7 +463,7 @@ func (g *groupHandler) LeaveGroup(ctx *gin.Context) {
 		return
 	}
 
-	if data.GroupJID.String() == "" {
+	if data.GroupJID == "" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "groupJid is required"})
 		return
 	}
