@@ -394,22 +394,32 @@ func (g *groupService) UpdateParticipant(data *AddParticipantStruct, instance *i
 		return errors.New("invalid group JID")
 	}
 
+	g.loggerWrapper.GetLogger(instance.Id).LogInfo("[%s] UpdateParticipant: groupJID=%s action=%s participants=%v",
+		instance.Id, groupJID.String(), data.Action, data.Participants)
+
 	var participants []types.JID
 	for _, participant := range data.Participants {
 		recipient, ok := utils.ParseJID(participant)
-		participants = append(participants, recipient)
 		if !ok {
-			g.loggerWrapper.GetLogger(instance.Id).LogError("[%s] Error validating message fields", instance.Id)
+			g.loggerWrapper.GetLogger(instance.Id).LogError("[%s] Error validating participant: %s", instance.Id, participant)
 			return errors.New("invalid phone number")
 		}
+		// WhatsApp JIDs must NOT have a '+' prefix — strip it if CreateJID added one
+		if strings.HasPrefix(recipient.User, "+") {
+			recipient.User = strings.TrimPrefix(recipient.User, "+")
+		}
+		g.loggerWrapper.GetLogger(instance.Id).LogInfo("[%s] Participant parsed: input=%s -> jid=%s",
+			instance.Id, participant, recipient.String())
+		participants = append(participants, recipient)
 	}
 
 	_, err = client.UpdateGroupParticipants(context.Background(), groupJID, participants, data.Action)
 	if err != nil {
-		g.loggerWrapper.GetLogger(instance.Id).LogError("[%s] error create group: %v", instance.Id, err)
+		g.loggerWrapper.GetLogger(instance.Id).LogError("[%s] UpdateGroupParticipants error: %v", instance.Id, err)
 		return err
 	}
 
+	g.loggerWrapper.GetLogger(instance.Id).LogInfo("[%s] UpdateGroupParticipants success: action=%s", instance.Id, data.Action)
 	return nil
 }
 
